@@ -1,0 +1,12 @@
+Fonts bundled with this app (both under the SIL Open Font License, Version 1.1;
+the full license texts are in Anton-OFL.txt and Pacifico-OFL.txt beside them):
+
+- Anton-Regular.ttf — Copyright 2020 The Anton Project Authors
+  (https://github.com/googlefonts/AntonFont.git). Bold condensed display face
+  used for the cover title.
+- Pacifico-Regular.ttf — Copyright 2018 The Pacifico Project Authors
+  (https://github.com/googlefonts/Pacifico). Casual script face used for the
+  cover subtitle.
+
+Both are permissively licensed (OFL) and may be shipped with this app. No
+Rockstar Games font, logo or artwork is used anywhere in this entry.
