@@ -9,7 +9,7 @@
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildDossier } from './vendor/makefun-app.ts';
@@ -27,8 +27,9 @@ if (existsSync(join(here, 'screenshots'))) cpSync(join(here, 'screenshots'), joi
 // screenshots or one over 256 KiB; more than 993 files in app/ or 48 MiB of app
 // files, in all, or a path under app/ over 1000 bytes: app/ counts beside
 // /output's own 1000-entry cap, its screenshots/ and dossier.json).
+const dossierPath = join(out, 'dossier.json');
 writeFileSync(
-  join(out, 'dossier.json'),
+  dossierPath,
   buildDossier(out, {
     text_max_bytes: 163840,
     screenshots: { max: 4, max_bytes: 262144 },
@@ -37,3 +38,7 @@ writeFileSync(
     app_path_max_bytes: 1000,
   }),
 );
+
+// One line of proof the run finished: the dossier's byte size, which the
+// determinism check compares across the two runs.
+console.log(`wrote ${dossierPath} (${statSync(dossierPath).size} bytes)`);

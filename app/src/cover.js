@@ -97,6 +97,9 @@ export const SIZES = {
 };
 
 // A fresh default state: samples in every slot, hero panel on photo A.
+// The hero panel's photo is panned down (panelY 0.85) so the sample's face,
+// which sits in the top third of a portrait photo, lands inside the wide
+// hero panel instead of being cropped away by the cover fit.
 export function defaultState() {
   return {
     layout: 'viceGrid',
@@ -112,7 +115,7 @@ export function defaultState() {
     panelPhoto: [0, 1, 2, 0],
     panelZoom: [1, 1, 1, 1],
     panelX: [0, 0, 0, 0],
-    panelY: [0, 0, 0, 0],
+    panelY: [0.85, 0, 0, 0],
   };
 }
 
@@ -143,6 +146,10 @@ export function panelPolygon(panel, w, h, gutter) {
 }
 
 // Draws one photo into one panel: cover-fit, zoomed and panned, then graded.
+// The pan sliders move the photo across its whole overflow (the part cover-fit
+// crops away), so at either end the photo's edge reaches the panel's edge —
+// with a portrait photo in a wide panel that is the difference between a
+// headless torso and a face in frame.
 export function drawPanelPhoto(ctx, photo, panel, w, h, grade, zoom, ox, oy) {
   const poly = panelPolygon(panel, w, h, Math.max(3, w * 0.004));
   ctx.save();
@@ -159,8 +166,12 @@ export function drawPanelPhoto(ctx, photo, panel, w, h, grade, zoom, ox, oy) {
     const scale = base * (zoom || 1);
     const pw = photo.naturalWidth * scale;
     const ph = photo.naturalHeight * scale;
+    // Pan across the overflow, not a fixed slice of the panel: at ox/oy = ±1
+    // the photo's edge meets the panel's edge, whatever the zoom.
+    const maxOX = Math.max(0, (pw - bw) / 2);
+    const maxOY = Math.max(0, (ph - bh) / 2);
     ctx.filter = grade.filter;
-    ctx.drawImage(photo, bx + (bw - pw) / 2 + (ox || 0) * bw * 0.3, by + (bh - ph) / 2 + (oy || 0) * bh * 0.3, pw, ph);
+    ctx.drawImage(photo, bx + (bw - pw) / 2 + (ox || 0) * maxOX, by + (bh - ph) / 2 + (oy || 0) * maxOY, pw, ph);
     ctx.filter = 'none';
   } else {
     ctx.fillStyle = '#3a2049';
@@ -297,9 +308,41 @@ export function drawGrainVignette(ctx, w, h) {
   ctx.restore();
 }
 
+// A bright dashed outline plus a "PANEL n" tag around the panel the editor
+// has selected, so a click (or a drag) in the preview answers visibly. The
+// export path never passes a selection, so exported covers stay clean.
+export function drawSelectedOutline(ctx, panel, w, h, label) {
+  const poly = panelPolygon(panel, w, h, Math.max(3, w * 0.004));
+  ctx.save();
+  ctx.beginPath();
+  poly.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
+  ctx.closePath();
+  ctx.setLineDash([Math.max(8, w * 0.014), Math.max(6, w * 0.008)]);
+  ctx.strokeStyle = '#ff2e88';
+  ctx.lineWidth = Math.max(3, w * 0.005);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  const fs = Math.max(15, w * 0.016);
+  ctx.font = `bold ${fs}px system-ui, sans-serif`;
+  const tw = ctx.measureText(label).width;
+  // Bottom-left of the panel: the top-left is where the NEON COAST badge
+  // sits, so a tag there would collide with it.
+  const tx = poly[3][0] + Math.max(4, w * 0.006);
+  const ty = poly[3][1] - fs * 1.9 - Math.max(4, h * 0.008);
+  ctx.fillStyle = '#ff2e88';
+  ctx.beginPath();
+  ctx.roundRect(tx, ty, tw + fs, fs * 1.9, fs * 0.5);
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, tx + fs / 2, ty + fs * 0.98);
+  ctx.restore();
+}
+
 // Draws the whole cover onto `canvas` at its own size. `photos` is an array of
-// images (or nulls); state picks a photo per panel.
-export function drawCover(canvas, photos, state) {
+// images (or nulls); state picks a photo per panel. `selected` is the panel
+// the editor has selected (-1 for none, and always -1 on export).
+export function drawCover(canvas, photos, state, selected = -1) {
   const ctx = canvas.getContext('2d');
   const { width: w, height: h } = canvas;
   const layout = LAYOUTS[state.layout] || LAYOUTS.viceGrid;
@@ -325,6 +368,23 @@ export function drawCover(canvas, photos, state) {
   });
   drawTitleBlock(ctx, state, w, h);
   drawBadge(ctx, w, h, state.titlePos !== 'top');
+  // The selection outline goes on last (before grain/frame), over the title
+  // band, so its PANEL n tag is never half-hidden behind the band.
+  if (selected >= 0 && selected < layout.panels.length) {
+    const panel = layout.panels[selected];
+    if (panel.tilt) {
+      ctx.save();
+      const cx = (panel.x + panel.w / 2) * w;
+      const cy = (panel.y + panel.h / 2) * h;
+      ctx.translate(cx, cy);
+      ctx.rotate((panel.tilt * Math.PI) / 180);
+      ctx.translate(-cx, -cy);
+      drawSelectedOutline(ctx, panel, w, h, `PANEL ${selected + 1}`);
+      ctx.restore();
+    } else {
+      drawSelectedOutline(ctx, panel, w, h, `PANEL ${selected + 1}`);
+    }
+  }
   if (state.grain) drawGrainVignette(ctx, w, h);
   if (state.frame) {
     ctx.strokeStyle = '#ffffff';

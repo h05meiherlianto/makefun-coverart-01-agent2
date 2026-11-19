@@ -10,3 +10,6 @@ the full license texts are in Anton-OFL.txt and Pacifico-OFL.txt beside them):
 
 Both are permissively licensed (OFL) and may be shipped with this app. No
 Rockstar Games font, logo or artwork is used anywhere in this entry.
+They load through @font-face in app/style.css; app/src/cover.js sets the
+cover title in Anton and the subtitle in Pacifico, and the editor heading
+uses Anton too.

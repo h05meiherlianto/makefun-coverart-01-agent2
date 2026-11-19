@@ -34,7 +34,9 @@ function sizeOfCanvas() {
 
 function redraw() {
   sizeOfCanvas();
-  drawCover(canvas, photos, state);
+  // The live preview outlines the selected panel; exports (renderCover) do
+  // not pass a selection, so exported covers stay clean.
+  drawCover(canvas, photos, state, selectedPanel);
 }
 
 // Choice-button group: one pressed button per group, wired to a state key.
@@ -70,7 +72,9 @@ const panelY = document.getElementById('panelY');
 
 function syncPanelControls() {
   const layout = LAYOUTS[state.layout];
-  document.getElementById('panelName').textContent = `Panel ${selectedPanel + 1} of ${layout.panels.length}`;
+  document.getElementById('panelName').textContent = selectedPanel < 0
+    ? 'None'
+    : `Panel ${selectedPanel + 1} of ${layout.panels.length}`;
   panelPhoto.value = String(state.panelPhoto[selectedPanel] ?? 0);
   panelZoom.value = String(state.panelZoom[selectedPanel] ?? 1);
   panelX.value = String(state.panelX[selectedPanel] ?? 0);
@@ -100,16 +104,56 @@ panelY.addEventListener('input', () => {
   redraw();
 });
 
-// Click a panel in the live preview to select it for cropping.
-canvas.addEventListener('click', (e) => {
+// Click a panel in the live preview to select it for cropping; drag the
+// photo inside a panel to pan it there, the same as the position sliders.
+let drag = null;
+function coverPoint(e) {
   const rect = canvas.getBoundingClientRect();
-  const x = ((e.clientX - rect.left) / rect.width) * canvas.width;
-  const y = ((e.clientY - rect.top) / rect.height) * canvas.height;
+  return {
+    x: ((e.clientX - rect.left) / rect.width) * canvas.width,
+    y: ((e.clientY - rect.top) / rect.height) * canvas.height,
+  };
+}
+canvas.addEventListener('pointerdown', (e) => {
+  const { x, y } = coverPoint(e);
   const hit = panelAt(state, x, y, canvas.width, canvas.height);
-  if (hit >= 0) {
-    selectedPanel = hit;
-    syncPanelControls();
-  }
+  if (hit < 0) return;
+  selectedPanel = hit;
+  syncPanelControls();
+  drag = { x: e.clientX, y: e.clientY, moved: false, panel: hit };
+  canvas.setPointerCapture(e.pointerId);
+  redraw();
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x;
+  const dy = e.clientY - drag.y;
+  if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
+  if (!drag.moved) return;
+  // Dragging follows the pointer: a full panel width of drag pans the photo
+  // across most of its overflow, in either direction.
+  const layout = LAYOUTS[state.layout];
+  const panel = layout.panels[drag.panel];
+  const panelW = panel.w * canvas.width;
+  const panelH = panel.h * canvas.height;
+  const i = drag.panel;
+  state.panelX[i] = Math.max(-1, Math.min(1, (state.panelX[i] || 0) + (dx / panelW) * 1.6));
+  state.panelY[i] = Math.max(-1, Math.min(1, (state.panelY[i] || 0) + (dy / panelH) * 1.6));
+  drag.x = e.clientX;
+  drag.y = e.clientY;
+  syncPanelControls();
+  redraw();
+});
+canvas.addEventListener('pointerup', () => { drag = null; });
+canvas.addEventListener('pointercancel', () => { drag = null; });
+
+// Reset the selected panel's crop: zoom 1, centred.
+document.getElementById('resetCrop').addEventListener('click', () => {
+  state.panelZoom[selectedPanel] = 1;
+  state.panelX[selectedPanel] = 0;
+  state.panelY[selectedPanel] = 0;
+  syncPanelControls();
+  redraw();
 });
 
 // Photo uploads --------------------------------------------------------------

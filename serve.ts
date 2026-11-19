@@ -22,6 +22,7 @@ const MIME: Record<string, string> = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
+  '.avif': 'image/avif',
   '.gif': 'image/gif',
   '.webp': 'image/webp',
   '.svg': 'image/svg+xml',
@@ -38,7 +39,7 @@ const MIME: Record<string, string> = {
   '.txt': 'text/plain; charset=utf-8',
 };
 
-createServer((request, response) => {
+const server = createServer((request, response) => {
   const url = new URL(request.url ?? '/', 'http://localhost');
   let pathname: string;
   try {
@@ -68,6 +69,17 @@ createServer((request, response) => {
     'cache-control': 'no-store',
   });
   createReadStream(file).pipe(response);
-}).listen(port, '127.0.0.1', () => {
+});
+server.listen(port, '127.0.0.1', () => {
   console.log(`app/ is on http://localhost:${port}`);
+});
+
+// A busy port is the common failure when the server is started twice: say so
+// plainly instead of crashing with a bare EADDRINUSE stack.
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`port ${port} is already in use — stop the other server or run with --port <n>`);
+    process.exit(1);
+  }
+  throw err;
 });

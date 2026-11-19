@@ -28,7 +28,10 @@ input[type=file] { font: inherit; font-size: 13px; }
 input[type=range] { width: 100%; accent-color: #ff2e88; }
 button { font: inherit; font-weight: 700; padding: 10px 12px; border: 0; border-radius: 8px; background: #ff2e88; color: #fff; cursor: pointer; }
 button:hover { background: #ff4d9c; }
+button:focus-visible { outline: 3px solid #ffd34d; outline-offset: 2px; }
 button.ghost { background: #3a2350; color: #ffd34d; width: 100%; }
+button.ghost:hover { background: #4a2d63; }
+button.mini { padding: 7px 10px; font-size: 13px; font-weight: 600; }
 button.primary { width: 100%; font-size: 17px; padding: 13px; background: linear-gradient(90deg, #ff7a18, #ff2e88); }
 .slots { display: grid; gap: 8px; margin-bottom: 10px; }
 .slot { margin-bottom: 0; }
@@ -42,7 +45,8 @@ button.primary { width: 100%; font-size: 17px; padding: 13px; background: linear
 #status { margin: 8px 0 0; min-height: 1.2em; color: #7dffb0; }
 .fine { font-size: 12px; color: #9a83b0; margin: 0; }
 .stage { flex: 1; min-width: 0; position: sticky; top: 20px; }
-#cover { width: 100%; height: auto; display: block; box-shadow: 0 12px 44px rgba(0,0,0,0.55); cursor: crosshair; background: #160a24; }
+#cover { width: 100%; height: auto; display: block; box-shadow: 0 12px 44px rgba(0,0,0,0.55); cursor: grab; background: #160a24; touch-action: none; }
+#cover:active { cursor: grabbing; }
 .stageHint { text-align: center; color: #c9b3dd; margin: 10px 0 0; }
 body.shot-cover .controls, body.shot-cover .stageHint { display: none; }
 body.shot-cover .app { padding: 0; gap: 0; }
